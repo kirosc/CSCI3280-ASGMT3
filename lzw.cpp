@@ -19,11 +19,14 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <unordered_map>
+#include <iostream>
 
 #define CODE_SIZE  12
 #define TRUE 1
 #define FALSE 0
 
+using namespace std;
 
 /* function prototypes */
 unsigned int read_code(FILE*, unsigned int); 
@@ -32,6 +35,7 @@ void writefileheader(FILE *,char**,int);
 void readfileheader(FILE *,char**,int *);
 void compress(FILE*, FILE*);
 void decompress(FILE*, FILE*);
+unordered_map<unsigned int, string> initialize_dict();
 
 int main(int argc, char **argv)
 {
@@ -54,8 +58,13 @@ int main(int argc, char **argv)
 			writefileheader(lzw_file,input_file_names,no_of_file);
         	        	
 			/* ADD CODES HERE */
-        	
-			fclose(lzw_file);        	
+            FILE *text_file;
+            text_file = fopen(argv[3] ,"r");
+            compress(text_file, lzw_file);
+            fclose(text_file);
+
+
+            fclose(lzw_file);
 		} else
 		if ( strcmp(argv[1],"-d") == 0)
 		{	
@@ -210,9 +219,8 @@ void write_code(FILE *output, unsigned int code, unsigned int code_size)
  ****************************************************************/
 void compress(FILE *input, FILE *output)
 {
-
 	/* ADD CODES HERE */
-
+    unordered_map<unsigned int, string> dict = initialize_dict();
 }
 
 
@@ -226,4 +234,14 @@ void decompress(FILE *input, FILE *output)
 
 	/* ADD CODES HERE */
 
+}
+
+// Initialize the first 256 ASCII codes
+unordered_map<unsigned int, string> initialize_dict() {
+    unordered_map<unsigned int, string> dict;
+    for (int i = 0; i < 256; ++i) {
+        dict[i] = string(1, (char) i);
+    }
+
+    return dict;
 }
