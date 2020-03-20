@@ -35,7 +35,7 @@ void writefileheader(FILE *,char**,int);
 void readfileheader(FILE *,char**,int *);
 void compress(FILE*, FILE*);
 void decompress(FILE*, FILE*);
-unordered_map<unsigned int, string> initialize_dict();
+unordered_map<string, unsigned int> initialize_dict();
 
 int main(int argc, char **argv)
 {
@@ -220,7 +220,22 @@ void write_code(FILE *output, unsigned int code, unsigned int code_size)
 void compress(FILE *input, FILE *output)
 {
 	/* ADD CODES HERE */
-    unordered_map<unsigned int, string> dict = initialize_dict();
+	char c;
+	fpos_t pos;
+    unordered_map<string, unsigned int> dict = initialize_dict();
+
+    while((c = fgetc(input)) != EOF)
+    {
+        fgetpos(input, &pos);
+
+        if (dict.find(string(1, c)) != dict.end()) {
+            cout << "F" << endl;
+        } else {
+            cout << "N" << endl;
+        }
+
+        fsetpos(input, &pos);
+    }
 }
 
 
@@ -237,10 +252,10 @@ void decompress(FILE *input, FILE *output)
 }
 
 // Initialize the first 256 ASCII codes
-unordered_map<unsigned int, string> initialize_dict() {
-    unordered_map<unsigned int, string> dict;
+unordered_map<string, unsigned int> initialize_dict() {
+    unordered_map<string, unsigned int> dict;
     for (int i = 0; i < 256; ++i) {
-        dict[i] = string(1, (char) i);
+        dict[string(1, (char) i)] = i;
     }
 
     return dict;
