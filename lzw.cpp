@@ -68,6 +68,7 @@ int main(int argc, char **argv)
                 fclose(text_file);
             }
 
+            write_code(lzw_file, 0, 8);
             fclose(lzw_file);
 		} else
 		if ( strcmp(argv[1],"-d") == 0)
@@ -243,8 +244,7 @@ void compress(FILE *input, FILE *output)
 	/* ADD CODES HERE */
 	char c;
     string p, c_str;
-    unsigned int code, count = 256;
-    fpos_t pos;
+    unsigned int code;
     static unordered_map<string, unsigned int> comp_dict = initialize_comp_dict();
 
     while((c = fgetc(input)) != EOF) {
@@ -254,15 +254,18 @@ void compress(FILE *input, FILE *output)
             p += c;
         } else {
             write_code(output, code, CODE_SIZE);
-            comp_dict[p + c] = count++;
+            comp_dict[p + c] = comp_dict.size();
             p = c;
             code = comp_dict[p];
+            // Dictionary is full
+            if (comp_dict.size() == 4095) {
+                comp_dict = initialize_comp_dict();
+            }
         }
     }
     write_code(output, comp_dict[p], CODE_SIZE);
     // EOF
     write_code(output, 4095, CODE_SIZE);
-    write_code(output, 0, CODE_SIZE);
 }
 
 
@@ -275,7 +278,6 @@ void decompress(FILE *input, FILE *output)
 {
 	/* ADD CODES HERE */
     unsigned int pw, cw;
-    unsigned int count = 256;
     string key_string, c, str;
     static unordered_map<unsigned int, string> decomp_dict = initialize_decomp_dict();
 
@@ -294,9 +296,8 @@ void decompress(FILE *input, FILE *output)
             str += c;
         }
         fputs(str.c_str(), output);
-        decomp_dict[count] = decomp_dict[pw] + c;
+        decomp_dict[decomp_dict.size()] = decomp_dict[pw] + c;
         pw = cw;
-        count++;
 
         // Dictionary is full
         if (decomp_dict.size() == 4095) {
