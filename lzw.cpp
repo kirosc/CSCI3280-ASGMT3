@@ -20,7 +20,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include <unordered_map>
-#include <iostream>
 
 #define CODE_SIZE  12
 #define TRUE 1
@@ -258,7 +257,7 @@ void compress(FILE *input, FILE *output)
             p = c;
             code = comp_dict[p];
             // Dictionary is full
-            if (comp_dict.size() == 4095) {
+            if (comp_dict.size() == 4096) {
                 comp_dict = initialize_comp_dict();
             }
         }
