@@ -35,10 +35,8 @@ void writefileheader(FILE *,char**,int);
 void readfileheader(FILE *,char**,int *);
 void compress(FILE*, FILE*);
 void decompress(FILE*, FILE*);
-unordered_map<string, unsigned int> initialize_dict();
-
-// Dictionary
-unordered_map<string, unsigned int> dict;
+unordered_map<string, unsigned int> initialize_comp_dict();
+unordered_map<unsigned int, string> initialize_decomp_dict();
 
 int main(int argc, char **argv)
 {
@@ -61,8 +59,6 @@ int main(int argc, char **argv)
 			writefileheader(lzw_file,input_file_names,no_of_file);
         	        	
 			/* ADD CODES HERE */
-            dict = initialize_dict();
-
             // Compress files one by one
             for (int i = 3; argv[i] != nullptr; ++i) {
                 printf("Adding : %s\n", argv[i]);
@@ -84,8 +80,25 @@ int main(int argc, char **argv)
 			readfileheader(lzw_file,&output_file_names,&no_of_file);
 			
 			/* ADD CODES HERE */
-			
-			fclose(lzw_file);		
+
+            FILE *output_file;
+            string str = string(output_file_names);
+            unsigned int end_pos = str.find("\n\n");
+
+            // Delimit file names by '\n'
+            str = str.substr(0, end_pos + 1);
+            strcpy(output_file_names, str.c_str());
+            output_file_names = strtok(output_file_names, "\n");
+
+            // Decompress file one by one
+            while(output_file_names != nullptr) {
+                printf("Deflating: %s\n", output_file_names);
+                output_file = fopen(output_file_names ,"wb");
+                decompress(lzw_file, output_file);
+                output_file_names = strtok(nullptr, "\n");
+            }
+
+			fclose(lzw_file);
 			free(output_file_names);
 		}else
 			printusage = 1;
@@ -181,11 +194,11 @@ unsigned int read_code(FILE *input, unsigned int code_size)
         input_bit_buffer |= (unsigned long) getc(input) << (24-input_bit_count);
         input_bit_count += 8;
     }
-    
+
     return_value = input_bit_buffer >> (32 - code_size);
     input_bit_buffer <<= code_size;
     input_bit_count -= code_size;
-    
+
     return(return_value);
 }
 
@@ -231,7 +244,8 @@ void compress(FILE *input, FILE *output)
 	char c;
 	unsigned int count = 256;
 	fpos_t pos;
-    
+	static unordered_map<string, unsigned int> comp_dict = initialize_comp_dict();
+
     while((c = fgetc(input)) != EOF)
     {
         fgetpos(input, &pos);
@@ -240,14 +254,15 @@ void compress(FILE *input, FILE *output)
         unsigned int code;
 
         // Dictionary is full
-        if (dict.size() == 4095) {
-            dict = initialize_dict();
+        cout << comp_dict.size() << endl;
+        if (comp_dict.size() == 4095) {
+            comp_dict = initialize_comp_dict();
         }
 
         do {
-            if (dict.find(key_string) != dict.end()) {
+            if (comp_dict.find(key_string) != comp_dict.end()) {
                 // String FOUND in dictionary
-                code = dict[key_string];
+                code = comp_dict[key_string];
                 if (code > 255) {
                     pos++; // Shift the pointer for the next char to read as we compress some chars
                 }
@@ -258,7 +273,7 @@ void compress(FILE *input, FILE *output)
                 }
             } else {
                 // String NOT FOUND in dictionary
-                dict[key_string] = count++;
+                comp_dict[key_string] = count++;
                 break;
             }
         } while(true);
@@ -278,17 +293,57 @@ void compress(FILE *input, FILE *output)
  *
  ****************************************************************/
 void decompress(FILE *input, FILE *output)
-{	
-
+{
 	/* ADD CODES HERE */
+    unsigned int pw, cw;
+    unsigned int count = 256;
+    string key_string, c, str;
+    static unordered_map<unsigned int, string> decomp_dict = initialize_decomp_dict();
 
+    pw = read_code(input, CODE_SIZE);
+    key_string = decomp_dict[pw];
+    fputs(key_string.c_str(), output);
+
+    while ((cw = read_code(input, CODE_SIZE)) != 4095) {
+        if (decomp_dict.find(cw) != decomp_dict.end()) {
+            // FOUND
+            str = decomp_dict[cw];
+            c = str[0];
+        } else {
+            str = decomp_dict[pw];
+            c = str[0];
+            str += c;
+        }
+        fputs(str.c_str(), output);
+        decomp_dict[count] = decomp_dict[pw] + c;
+        pw = cw;
+        count++;
+
+        // Dictionary is full
+        if (decomp_dict.size() == 4095) {
+            decomp_dict = initialize_decomp_dict();
+            pw = read_code(input, CODE_SIZE);
+            key_string = decomp_dict[pw];
+            fputs(key_string.c_str(), output);
+        }
+    }
 }
 
-// Initialize the first 256 ASCII codes
-unordered_map<string, unsigned int> initialize_dict() {
+// Initialize the first 256 ASCII codes for compression
+unordered_map<string, unsigned int> initialize_comp_dict() {
     unordered_map<string, unsigned int> dict;
     for (int i = 0; i < 256; ++i) {
         dict[string(1, (char) i)] = i;
+    }
+
+    return dict;
+}
+
+// Initialize the first 256 ASCII codes for decompression
+unordered_map<unsigned int, string> initialize_decomp_dict() {
+    unordered_map<unsigned int, string> dict;
+    for (int i = 0; i < 256; ++i) {
+        dict[i] = string(1, (char) i);
     }
 
     return dict;
