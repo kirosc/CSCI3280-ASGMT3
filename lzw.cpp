@@ -63,7 +63,7 @@ int main(int argc, char **argv)
             for (int i = 3; argv[i] != nullptr; ++i) {
                 printf("Adding : %s\n", argv[i]);
                 FILE *text_file;
-                text_file = fopen(argv[i] ,"r");
+                text_file = fopen(argv[i] ,"rb");
                 compress(text_file, lzw_file);
                 fclose(text_file);
             }
@@ -242,45 +242,24 @@ void compress(FILE *input, FILE *output)
 {
 	/* ADD CODES HERE */
 	char c;
-	unsigned int count = 256;
-	fpos_t pos;
-	static unordered_map<string, unsigned int> comp_dict = initialize_comp_dict();
+    string p, c_str;
+    unsigned int code, count = 256;
+    fpos_t pos;
+    static unordered_map<string, unsigned int> comp_dict = initialize_comp_dict();
 
-    while((c = fgetc(input)) != EOF)
-    {
-        fgetpos(input, &pos);
-
-        string key_string = string(1, c);
-        unsigned int code;
-
-        // Dictionary is full
-        cout << comp_dict.size() << endl;
-        if (comp_dict.size() == 4095) {
-            comp_dict = initialize_comp_dict();
+    while((c = fgetc(input)) != EOF) {
+        if (comp_dict.find(p + c) != comp_dict.end()) {
+            // FOUND
+            code = comp_dict[p + c];
+            p += c;
+        } else {
+            write_code(output, code, CODE_SIZE);
+            comp_dict[p + c] = count++;
+            p = c;
+            code = comp_dict[p];
         }
-
-        do {
-            if (comp_dict.find(key_string) != comp_dict.end()) {
-                // String FOUND in dictionary
-                code = comp_dict[key_string];
-                if (code > 255) {
-                    pos++; // Shift the pointer for the next char to read as we compress some chars
-                }
-                if ((c = fgetc(input)) != EOF) {
-                    key_string += c; // Keep adding char to the search string
-                } else {
-                    break;
-                }
-            } else {
-                // String NOT FOUND in dictionary
-                comp_dict[key_string] = count++;
-                break;
-            }
-        } while(true);
-        write_code(output, code, CODE_SIZE);
-
-        fsetpos(input, &pos);
     }
+    write_code(output, comp_dict[p], CODE_SIZE);
     // EOF
     write_code(output, 4095, CODE_SIZE);
     write_code(output, 0, CODE_SIZE);
