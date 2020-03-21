@@ -37,6 +37,9 @@ void compress(FILE*, FILE*);
 void decompress(FILE*, FILE*);
 unordered_map<string, unsigned int> initialize_dict();
 
+// Dictionary
+unordered_map<string, unsigned int> dict;
+
 int main(int argc, char **argv)
 {
     int printusage = 0;
@@ -58,11 +61,16 @@ int main(int argc, char **argv)
 			writefileheader(lzw_file,input_file_names,no_of_file);
         	        	
 			/* ADD CODES HERE */
-            FILE *text_file;
-            text_file = fopen(argv[3] ,"r");
-            compress(text_file, lzw_file);
-            fclose(text_file);
+            dict = initialize_dict();
 
+            // Compress files one by one
+            for (int i = 3; argv[i] != nullptr; ++i) {
+                printf("Adding : %s\n", argv[i]);
+                FILE *text_file;
+                text_file = fopen(argv[i] ,"r");
+                compress(text_file, lzw_file);
+                fclose(text_file);
+            }
 
             fclose(lzw_file);
 		} else
@@ -221,21 +229,46 @@ void compress(FILE *input, FILE *output)
 {
 	/* ADD CODES HERE */
 	char c;
+	unsigned int count = 256;
 	fpos_t pos;
-    unordered_map<string, unsigned int> dict = initialize_dict();
-
+    
     while((c = fgetc(input)) != EOF)
     {
         fgetpos(input, &pos);
 
-        if (dict.find(string(1, c)) != dict.end()) {
-            cout << "F" << endl;
-        } else {
-            cout << "N" << endl;
+        string key_string = string(1, c);
+        unsigned int code;
+
+        // Dictionary is full
+        if (dict.size() == 4095) {
+            dict = initialize_dict();
         }
+
+        do {
+            if (dict.find(key_string) != dict.end()) {
+                // String FOUND in dictionary
+                code = dict[key_string];
+                if (code > 255) {
+                    pos++; // Shift the pointer for the next char to read as we compress some chars
+                }
+                if ((c = fgetc(input)) != EOF) {
+                    key_string += c; // Keep adding char to the search string
+                } else {
+                    break;
+                }
+            } else {
+                // String NOT FOUND in dictionary
+                dict[key_string] = count++;
+                break;
+            }
+        } while(true);
+        write_code(output, code, CODE_SIZE);
 
         fsetpos(input, &pos);
     }
+    // EOF
+    write_code(output, 4095, CODE_SIZE);
+    write_code(output, 0, CODE_SIZE);
 }
 
 
