@@ -42,7 +42,7 @@ void decompress(FILE *, FILE *);
 
 map<string, unsigned int> initialize_comp_dict();
 
-map<unsigned int, string> initialize_decomp_dict();
+string *initialize_decomp_dict();
 
 int main(int argc, char **argv) {
     int printusage = 0;
@@ -268,14 +268,15 @@ void decompress(FILE *input, FILE *output) {
     /* ADD CODES HERE */
     unsigned int pw, cw;
     string key_string, c, str;
-    static map<unsigned int, string> decomp_dict = initialize_decomp_dict();
+    static unsigned int count = 256;
+    static string* decomp_dict = initialize_decomp_dict();
 
     pw = read_code(input, CODE_SIZE);
     key_string = decomp_dict[pw];
     fputs(key_string.c_str(), output);
 
     while ((cw = read_code(input, CODE_SIZE)) != 4095) {
-        if (decomp_dict.find(cw) != decomp_dict.end()) {
+        if (!decomp_dict[cw].empty()) {
             // FOUND
             str = decomp_dict[cw];
             c = str[0];
@@ -285,11 +286,12 @@ void decompress(FILE *input, FILE *output) {
             str += c;
         }
         fputs(str.c_str(), output);
-        decomp_dict[decomp_dict.size()] = decomp_dict[pw] + c;
+        decomp_dict[count++] = decomp_dict[pw] + c;
         pw = cw;
 
         // Dictionary is full
-        if (decomp_dict.size() == 4095) {
+        if (count == 4095) {
+            count = 256;
             decomp_dict = initialize_decomp_dict();
             pw = read_code(input, CODE_SIZE);
             key_string = decomp_dict[pw];
@@ -309,8 +311,8 @@ map<string, unsigned int> initialize_comp_dict() {
 }
 
 // Initialize the first 256 ASCII codes for decompression
-map<unsigned int, string> initialize_decomp_dict() {
-    map<unsigned int, string> dict;
+string *initialize_decomp_dict() {
+    auto *dict = new string[4095];
     for (int i = 0; i < 256; ++i) {
         dict[i] = string(1, (char) i);
     }
