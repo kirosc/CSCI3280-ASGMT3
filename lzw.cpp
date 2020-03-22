@@ -18,8 +18,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <ctype.h>
-#include <unordered_map>
+#include <map>
+#include <string>
 
 #define CODE_SIZE  12
 #define TRUE 1
@@ -28,58 +28,60 @@
 using namespace std;
 
 /* function prototypes */
-unsigned int read_code(FILE*, unsigned int); 
-void write_code(FILE*, unsigned int, unsigned int); 
-void writefileheader(FILE *,char**,int);
-void readfileheader(FILE *,char**,int *);
-void compress(FILE*, FILE*);
-void decompress(FILE*, FILE*);
-unordered_map<string, unsigned int> initialize_comp_dict();
-unordered_map<unsigned int, string> initialize_decomp_dict();
+unsigned int read_code(FILE *, unsigned int);
 
-int main(int argc, char **argv)
-{
+void write_code(FILE *, unsigned int, unsigned int);
+
+void writefileheader(FILE *, char **, int);
+
+void readfileheader(FILE *, char **, int *);
+
+void compress(FILE *, FILE *);
+
+void decompress(FILE *, FILE *);
+
+map<string, unsigned int> initialize_comp_dict();
+
+map<unsigned int, string> initialize_decomp_dict();
+
+int main(int argc, char **argv) {
     int printusage = 0;
-    int	no_of_file;
-    char **input_file_names;    
-	char *output_file_names;
+    int no_of_file;
+    char **input_file_names;
+    char *output_file_names;
     FILE *lzw_file;
 
-    if (argc >= 3)
-    {
-		if ( strcmp(argv[1],"-c") == 0)
-		{		
-			/* compression */
-			lzw_file = fopen(argv[2] ,"wb");
-        
-			/* write the file header */
-			input_file_names = argv + 3;
-			no_of_file = argc - 3;
-			writefileheader(lzw_file,input_file_names,no_of_file);
-        	        	
-			/* ADD CODES HERE */
+    if (argc >= 3) {
+        if (strcmp(argv[1], "-c") == 0) {
+            /* compression */
+            lzw_file = fopen(argv[2], "wb");
+
+            /* write the file header */
+            input_file_names = argv + 3;
+            no_of_file = argc - 3;
+            writefileheader(lzw_file, input_file_names, no_of_file);
+
+            /* ADD CODES HERE */
             // Compress files one by one
             for (int i = 3; argv[i] != nullptr; ++i) {
                 printf("Adding : %s\n", argv[i]);
                 FILE *text_file;
-                text_file = fopen(argv[i] ,"rb");
+                text_file = fopen(argv[i], "rb");
                 compress(text_file, lzw_file);
                 fclose(text_file);
             }
 
             write_code(lzw_file, 0, 8);
             fclose(lzw_file);
-		} else
-		if ( strcmp(argv[1],"-d") == 0)
-		{	
-			/* decompress */
-			lzw_file = fopen(argv[2] ,"rb");
-			
-			/* read the file header */
-			no_of_file = 0;			
-			readfileheader(lzw_file,&output_file_names,&no_of_file);
-			
-			/* ADD CODES HERE */
+        } else if (strcmp(argv[1], "-d") == 0) {
+            /* decompress */
+            lzw_file = fopen(argv[2], "rb");
+
+            /* read the file header */
+            no_of_file = 0;
+            readfileheader(lzw_file, &output_file_names, &no_of_file);
+
+            /* ADD CODES HERE */
             FILE *output_file;
             string str = string(output_file_names);
             unsigned int end_pos = str.find("\n\n");
@@ -90,24 +92,24 @@ int main(int argc, char **argv)
             output_file_names = strtok(output_file_names, "\n");
 
             // Decompress file one by one
-            while(output_file_names != nullptr) {
+            while (output_file_names != nullptr) {
                 printf("Deflating: %s\n", output_file_names);
-                output_file = fopen(output_file_names ,"wb");
+                output_file = fopen(output_file_names, "wb");
                 decompress(lzw_file, output_file);
                 output_file_names = strtok(nullptr, "\n");
             }
 
-			fclose(lzw_file);
-			free(output_file_names);
-		}else
-			printusage = 1;
-    }else
-		printusage = 1;
+            fclose(lzw_file);
+            free(output_file_names);
+        } else
+            printusage = 1;
+    } else
+        printusage = 1;
 
-	if (printusage)
-		printf("Usage: %s -<c/d> <lzw filename> <list of files>\n",argv[0]);
- 	
-	return 0;
+    if (printusage)
+        printf("Usage: %s -<c/d> <lzw filename> <list of files>\n", argv[0]);
+
+    return 0;
 }
 
 /*****************************************************************
@@ -115,16 +117,14 @@ int main(int argc, char **argv)
  * writefileheader() -  write the lzw file header to support multiple files
  *
  ****************************************************************/
-void writefileheader(FILE *lzw_file,char** input_file_names,int no_of_files)
-{
-	int i;
-	/* write the file header */
-	for ( i = 0 ; i < no_of_files; i++) 
-	{
-		fprintf(lzw_file,"%s\n",input_file_names[i]);	
-			
-	}
-	fputc('\n',lzw_file);
+void writefileheader(FILE *lzw_file, char **input_file_names, int no_of_files) {
+    int i;
+    /* write the file header */
+    for (i = 0; i < no_of_files; i++) {
+        fprintf(lzw_file, "%s\n", input_file_names[i]);
+
+    }
+    fputc('\n', lzw_file);
 
 }
 
@@ -133,43 +133,39 @@ void writefileheader(FILE *lzw_file,char** input_file_names,int no_of_files)
  * readfileheader() - read the fileheader from the lzw file
  *
  ****************************************************************/
-void readfileheader(FILE *lzw_file,char** output_filenames,int * no_of_files)
-{
-	int noofchar;
-	char c,lastc;
+void readfileheader(FILE *lzw_file, char **output_filenames, int *no_of_files) {
+    int noofchar;
+    char c, lastc;
 
-	noofchar = 0;
-	lastc = 0;
-	*no_of_files=0;
-	/* find where is the end of double newline */
-	while((c = fgetc(lzw_file)) != EOF)
-	{
-		noofchar++;
-		if (c =='\n')
-		{
-			if (lastc == c )
-				/* found double newline */
-				break;
-			(*no_of_files)++;
-		}
-		lastc = c;
-	}
+    noofchar = 0;
+    lastc = 0;
+    *no_of_files = 0;
+    /* find where is the end of double newline */
+    while ((c = fgetc(lzw_file)) != EOF) {
+        noofchar++;
+        if (c == '\n') {
+            if (lastc == c)
+                /* found double newline */
+                break;
+            (*no_of_files)++;
+        }
+        lastc = c;
+    }
 
-	if (c == EOF)
-	{
-		/* problem .... file may have corrupted*/
-		*no_of_files = 0;
-		return;
-	
-	}
-	/* allocate memeory for the filenames */
-	*output_filenames = (char *) malloc(sizeof(char)*noofchar);
-	/* roll back to start */
-	fseek(lzw_file,0,SEEK_SET);
+    if (c == EOF) {
+        /* problem .... file may have corrupted*/
+        *no_of_files = 0;
+        return;
 
-	fread((*output_filenames),1,(size_t)noofchar,lzw_file);
-	
-	return;
+    }
+    /* allocate memeory for the filenames */
+    *output_filenames = (char *) malloc(sizeof(char) * noofchar);
+    /* roll back to start */
+    fseek(lzw_file, 0, SEEK_SET);
+
+    fread((*output_filenames), 1, (size_t) noofchar, lzw_file);
+
+    return;
 }
 
 /*****************************************************************
@@ -177,8 +173,7 @@ void readfileheader(FILE *lzw_file,char** output_filenames,int * no_of_files)
  * read_code() - reads a specific-size code from the code file
  *
  ****************************************************************/
-unsigned int read_code(FILE *input, unsigned int code_size)
-{
+unsigned int read_code(FILE *input, unsigned int code_size) {
     unsigned int return_value;
     static int input_bit_count = 0;
     static unsigned long input_bit_buffer = 0L;
@@ -190,7 +185,7 @@ unsigned int read_code(FILE *input, unsigned int code_size)
     /* input_bit_count stores the no. of bits left in the buffer */
 
     while (input_bit_count <= 24) {
-        input_bit_buffer |= (unsigned long) getc(input) << (24-input_bit_count);
+        input_bit_buffer |= (unsigned long) getc(input) << (24 - input_bit_count);
         input_bit_count += 8;
     }
 
@@ -198,17 +193,16 @@ unsigned int read_code(FILE *input, unsigned int code_size)
     input_bit_buffer <<= code_size;
     input_bit_count -= code_size;
 
-    return(return_value);
+    return (return_value);
 }
 
 
 /*****************************************************************
  *
- * write_code() - write a code (of specific length) to the file 
+ * write_code() - write a code (of specific length) to the file
  *
  ****************************************************************/
-void write_code(FILE *output, unsigned int code, unsigned int code_size)
-{
+void write_code(FILE *output, unsigned int code, unsigned int code_size) {
     static int output_bit_count = 0;
     static unsigned long output_bit_buffer = 0L;
 
@@ -216,9 +210,9 @@ void write_code(FILE *output, unsigned int code, unsigned int code_size)
     /*   which is 32-bit wide. Content in output_bit_buffer is   */
     /*   written to the output file in bytes.                    */
 
-    /* output_bit_count stores the no. of bits left              */    
+    /* output_bit_count stores the no. of bits left              */
 
-    output_bit_buffer |= (unsigned long) code << (32-code_size-output_bit_count);
+    output_bit_buffer |= (unsigned long) code << (32 - code_size - output_bit_count);
     output_bit_count += code_size;
 
     while (output_bit_count >= 8) {
@@ -228,7 +222,7 @@ void write_code(FILE *output, unsigned int code, unsigned int code_size)
     }
 
 
-    /* only < 8 bits left in the buffer                          */    
+    /* only < 8 bits left in the buffer                          */
 
 }
 
@@ -237,15 +231,14 @@ void write_code(FILE *output, unsigned int code, unsigned int code_size)
  * compress() - compress the source file and output the coded text
  *
  ****************************************************************/
-void compress(FILE *input, FILE *output)
-{
-	/* ADD CODES HERE */
-	char c;
+void compress(FILE *input, FILE *output) {
+    /* ADD CODES HERE */
+    char c;
     string p, c_str;
     unsigned int code;
-    static unordered_map<string, unsigned int> comp_dict = initialize_comp_dict();
+    static map<string, unsigned int> comp_dict = initialize_comp_dict();
 
-    while((c = fgetc(input)) != EOF) {
+    while ((c = fgetc(input)) != EOF) {
         if (comp_dict.find(p + c) != comp_dict.end()) {
             // FOUND
             code = comp_dict[p + c];
@@ -262,7 +255,6 @@ void compress(FILE *input, FILE *output)
         }
     }
     write_code(output, comp_dict[p], CODE_SIZE);
-    // EOF
     write_code(output, 4095, CODE_SIZE);
 }
 
@@ -272,12 +264,11 @@ void compress(FILE *input, FILE *output)
  * decompress() - decompress a compressed file to the orig. file
  *
  ****************************************************************/
-void decompress(FILE *input, FILE *output)
-{
-	/* ADD CODES HERE */
+void decompress(FILE *input, FILE *output) {
+    /* ADD CODES HERE */
     unsigned int pw, cw;
     string key_string, c, str;
-    static unordered_map<unsigned int, string> decomp_dict = initialize_decomp_dict();
+    static map<unsigned int, string> decomp_dict = initialize_decomp_dict();
 
     pw = read_code(input, CODE_SIZE);
     key_string = decomp_dict[pw];
@@ -308,8 +299,8 @@ void decompress(FILE *input, FILE *output)
 }
 
 // Initialize the first 256 ASCII codes for compression
-unordered_map<string, unsigned int> initialize_comp_dict() {
-    unordered_map<string, unsigned int> dict;
+map<string, unsigned int> initialize_comp_dict() {
+    map<string, unsigned int> dict;
     for (int i = 0; i < 256; ++i) {
         dict[string(1, (char) i)] = i;
     }
@@ -318,8 +309,8 @@ unordered_map<string, unsigned int> initialize_comp_dict() {
 }
 
 // Initialize the first 256 ASCII codes for decompression
-unordered_map<unsigned int, string> initialize_decomp_dict() {
-    unordered_map<unsigned int, string> dict;
+map<unsigned int, string> initialize_decomp_dict() {
+    map<unsigned int, string> dict;
     for (int i = 0; i < 256; ++i) {
         dict[i] = string(1, (char) i);
     }
