@@ -80,7 +80,6 @@ int main(int argc, char **argv)
 			readfileheader(lzw_file,&output_file_names,&no_of_file);
 			
 			/* ADD CODES HERE */
-
             FILE *output_file;
             string str = string(output_file_names);
             unsigned int end_pos = str.find("\n\n");
